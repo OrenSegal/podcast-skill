@@ -1,6 +1,8 @@
-# claude-podcast-skill
+# podcast-skill
 
-Two Claude Code skills, shipped together:
+Two skills, shipped together, for both Claude Code and Codex CLI — both tools
+read the identical `SKILL.md`-plus-scripts folder shape, just from different
+homes (`~/.claude/skills` vs `~/.codex/skills`).
 
 - **`podcast`** — resolve any podcast URL to its feed/transcripts, mine
   episodes for ideas without dumping raw transcript into context, track
@@ -11,13 +13,13 @@ Two Claude Code skills, shipped together:
 
 ## Install
 
-Pick whichever install path fits how you use Claude Code. All three land the
-same two skills.
+Pick whichever install path fits your setup. All of them land the same two
+skills.
 
-### Claude Code plugin (recommended)
+### Claude Code plugin (recommended for Claude Code)
 
 ```
-/plugin marketplace add OrenSegal/claude-podcast-skill
+/plugin marketplace add OrenSegal/podcast-skill
 /plugin install podcast@oren-podcast-skills
 ```
 
@@ -25,28 +27,44 @@ same two skills.
 `signal-scout` in automatically. Skills are invoked as `/podcast` and
 `/signal-scout` (single-skill plugins, so no `plugin:skill` prefix needed).
 
+### Codex CLI
+
+Codex has no plugin/marketplace layer, just skill folders. Drop both
+directly into your global skills folder:
+
+```
+git clone https://github.com/OrenSegal/podcast-skill /tmp/podcast-skill
+cp -r /tmp/podcast-skill/plugins/podcast /tmp/podcast-skill/plugins/signal-scout ~/.codex/skills/
+```
+
+Or use the npx installer below, it detects `~/.codex` and writes there too.
+Codex reads global skills from `~/.codex/skills/<name>/SKILL.md`; see
+[developers.openai.com/codex/skills](https://developers.openai.com/codex/skills).
+
 ### skills.sh
 
 ```
-npx skills add OrenSegal/claude-podcast-skill
+npx skills add OrenSegal/podcast-skill
 ```
 
 ### npm / npx
 
 ```
-npx claude-podcast-skill
+npx podcast-skill
 ```
 
-Copies both skills straight into `~/.claude/skills/`. Safe to re-run — it
-never clobbers a `config.json` you've already customized.
+Detects which of `~/.claude` and `~/.codex` exist on your machine and copies
+both skills into whichever it finds (both, if you have both installed).
+Falls back to `~/.claude/skills` if neither is present yet. Safe to re-run —
+it never clobbers a `config.json` you've already customized.
 
 ## Repo layout
 
 ```
 plugins/podcast/          the podcast skill (SKILL.md, ledger.py, resolve.py)
 plugins/signal-scout/     the signal-scout skill (SKILL.md, template.html)
-.claude-plugin/marketplace.json   marketplace manifest for the two plugins above
-bin/install.js            npx entry point, same skill files, no Claude Code required
+.claude-plugin/marketplace.json   marketplace manifest for the two Claude Code plugins above
+bin/install.js            npx entry point, installs into Claude Code and/or Codex CLI
 ```
 
 ## License
