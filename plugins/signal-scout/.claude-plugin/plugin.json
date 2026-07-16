@@ -1,0 +1,9 @@
+{
+  "name": "signal-scout",
+  "version": "1.0.0",
+  "description": "Turn a pile of ranked research findings into one prioritized, shareable Artifact report. The reporting stage other skills call once extraction is done.",
+  "author": { "name": "Oren Segal" },
+  "homepage": "https://github.com/OrenSegal/claude-podcast-skill",
+  "repository": "https://github.com/OrenSegal/claude-podcast-skill",
+  "license": "MIT"
+}

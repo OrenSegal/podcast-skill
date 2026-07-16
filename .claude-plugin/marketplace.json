@@ -1,0 +1,8 @@
+{
+  "name": "oren-podcast-skills",
+  "owner": { "name": "Oren Segal" },
+  "plugins": [
+    { "name": "signal-scout", "source": "./plugins/signal-scout", "version": "1.0.0" },
+    { "name": "podcast", "source": "./plugins/podcast", "version": "1.0.0" }
+  ]
+}

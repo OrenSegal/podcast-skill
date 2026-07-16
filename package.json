@@ -1,0 +1,28 @@
+{
+  "name": "claude-podcast-skill",
+  "version": "1.0.0",
+  "description": "Install the podcast + signal-scout Claude Code skills into ~/.claude/skills",
+  "bin": {
+    "claude-podcast-skill": "./bin/install.js"
+  },
+  "files": [
+    "bin",
+    "plugins"
+  ],
+  "license": "MIT",
+  "author": "Oren Segal",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/OrenSegal/claude-podcast-skill"
+  },
+  "keywords": [
+    "claude",
+    "claude-code",
+    "claude-code-skill",
+    "podcast",
+    "plugin"
+  ],
+  "engines": {
+    "node": ">=18"
+  }
+}
