@@ -64,10 +64,10 @@ Don't hand-roll curl pipelines; don't hardcode a feed.
 python3 ~/.claude/skills/podcast/resolve.py "<url-or-show-name>" --limit 12 --download tx/
 ```
 
-Accepts an Apple URL, a Spotify URL, a direct RSS URL, or a bare show
-name. Prints the feed, marks the `?i=` target episode, lists which
-episodes have transcripts, and with `--download` writes flattened `.txt`
-plus a `manifest.json` (title, date, path, words, target).
+Accepts an Apple URL, a Spotify URL, a direct RSS URL, a bare show name,
+or a YouTube URL. Prints the feed, marks the `?i=` target episode, lists
+which episodes have transcripts, and with `--download` writes flattened
+`.txt` plus a `manifest.json` (title, date, path, words, target).
 
 What it encodes, so you don't rediscover it:
 - **Apple pages 500 on fetch. Never fetch them.** Only the `id<N>` in the
@@ -77,6 +77,22 @@ What it encodes, so you don't rediscover it:
   up the episode id directly returns `resultCount:0`. This is the trap.
 - Spotify has no open API — fall back to iTunes name search.
 - Some shows (Apple-exclusive) expose no `feedUrl`. Say so, don't guess.
+
+**YouTube gets its own path in `resolve.py`** — it isn't RSS, so it
+doesn't share the feed machinery above:
+- `youtube.com/watch?v=...` or `youtu.be/...` → single video, treated as
+  one episode.
+- `youtube.com/@handle`, `/channel/UC...`, `/playlist?list=...` → resolved
+  via `yt-dlp --flat-playlist`, capped at `--limit` videos, newest first.
+- Requires `yt-dlp` on PATH (`brew install yt-dlp`). No API key needed.
+- Transcript source is auto-captions (`--write-auto-sub`, falls back to
+  `--write-sub` if manual captions exist), pulled per-video directly by
+  `resolve.py` — there is no separate Step 2 fallback needed for YouTube,
+  it's already the primary path. A video with captions disabled or too
+  fresh for auto-captions to have generated yet downloads nothing for
+  that entry and is reported as a failure, not silently skipped.
+- No published date beyond `upload_date` (YYYYMMDD from yt-dlp) — good
+  enough for staleness checks, not a real RSS pubDate.
 
 ## Step 2 — Transcription fallback (only if the feed has no transcript tags)
 

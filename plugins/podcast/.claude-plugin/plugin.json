@@ -1,7 +1,7 @@
 {
   "name": "podcast",
-  "version": "1.0.0",
-  "description": "Pull any podcast's transcripts and mine them for ideas, trends, and mechanics without dumping raw transcript into context. Reports via the signal-scout skill.",
+  "version": "1.1.0",
+  "description": "Pull any podcast's transcripts (Apple Podcasts, Spotify, RSS, YouTube) and mine them for ideas, trends, and mechanics without dumping raw transcript into context. Reports via the signal-scout skill.",
   "author": { "name": "Oren Segal" },
   "homepage": "https://github.com/OrenSegal/podcast-skill",
   "repository": "https://github.com/OrenSegal/podcast-skill",

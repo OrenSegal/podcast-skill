@@ -10,8 +10,17 @@ Handles:
   open.spotify.com/show/... (falls back to name search)
   a direct RSS/XML url
   a bare show name (searched via iTunes)
+  youtube.com/watch?v=... or youtu.be/... (single video)
+  youtube.com/@handle, /channel/UC..., /playlist?list=... (multiple videos, needs --limit)
+
+YouTube requires yt-dlp on PATH (`brew install yt-dlp` / `pipx install yt-dlp`).
+There is no RSS feed for YouTube — each video is fetched directly via yt-dlp:
+metadata via `-J --skip-download`, transcript via auto-captions (falls back to
+manual subs if present). No podcast:transcript tag equivalent exists, so
+`have` transcript count reflects whichever videos actually have an en/en-orig
+caption track — some videos (esp. very new ones) may have none yet.
 """
-import json, re, sys, os, urllib.request, urllib.parse
+import json, re, sys, os, subprocess, urllib.request, urllib.parse
 import xml.etree.ElementTree as ET
 
 PNS = {"podcast": "https://podcastindex.org/namespace/1.0"}
@@ -24,6 +33,103 @@ def get(url, timeout=60):
 
 def itunes(params):
     return json.loads(get("https://itunes.apple.com/" + params).decode("utf-8", "replace"))
+
+
+def is_youtube(src):
+    return bool(re.search(r"youtube\.com|youtu\.be", src))
+
+
+def yt_dlp_json(url, extra=()):
+    cmd = ["yt-dlp", "--skip-download", "--no-warnings", "-J", *extra, url]
+    try:
+        raw = subprocess.run(cmd, capture_output=True, check=True, timeout=60).stdout
+    except FileNotFoundError:
+        sys.exit("yt-dlp not found on PATH. Install with `brew install yt-dlp`.")
+    except subprocess.CalledProcessError as ex:
+        sys.exit(f"yt-dlp failed for {url}: {ex.stderr.decode('utf-8', 'replace')[:400]}")
+    return json.loads(raw)
+
+
+def yt_list_videos(src, limit):
+    """Single video URL -> [that video]. Channel/@handle/playlist -> up to `limit`
+    videos, newest first, via yt-dlp's flat-playlist mode (fast, no per-video fetch)."""
+    if re.search(r"[?&]v=|youtu\.be/", src):
+        d = yt_dlp_json(src)
+        return [{"id": d["id"], "title": d.get("title", ""),
+                  "date": _yt_date(d.get("upload_date"))}]
+    d = yt_dlp_json(src, extra=["--flat-playlist", "--playlist-end", str(limit)])
+    entries = d.get("entries") or [d]
+    out = []
+    for e in entries[:limit]:
+        if not e or not e.get("id"):
+            continue
+        out.append({"id": e["id"], "title": e.get("title", ""),
+                     "date": _yt_date(e.get("upload_date"))})
+    return out
+
+
+def _yt_date(upload_date):
+    if not upload_date or len(upload_date) != 8:
+        return ""
+    return f"{upload_date[:4]}-{upload_date[4:6]}-{upload_date[6:]}"
+
+
+def yt_transcript(video_id, workdir):
+    """Auto-captions preferred (near-universal); falls back to manual subs.
+    Returns flattened text, or None if neither track exists."""
+    url = f"https://www.youtube.com/watch?v={video_id}"
+    base = os.path.join(workdir, video_id)
+    for sub_flag in ("--write-auto-sub", "--write-sub"):
+        cmd = ["yt-dlp", "--skip-download", "--no-warnings", sub_flag,
+               "--sub-lang", "en.*", "--sub-format", "vtt",
+               "-o", base + ".%(ext)s", url]
+        subprocess.run(cmd, capture_output=True, timeout=120)
+        for fname in os.listdir(workdir):
+            if fname.startswith(os.path.basename(base)) and fname.endswith(".vtt"):
+                path = os.path.join(workdir, fname)
+                text = flatten_transcript_file(path)
+                os.remove(path)
+                return text
+    return None
+
+
+def flatten_transcript_file(path):
+    with open(path, "rb") as f:
+        raw = f.read()
+    txt = raw.decode("utf-8", "replace")
+    lines = [l for l in txt.splitlines()
+             if l.strip() and "-->" not in l and not l.strip().isdigit()
+             and not l.startswith(("WEBVTT", "NOTE", "Kind:", "Language:"))]
+    lines = [re.sub(r"<[^>]+>", "", l) for l in lines]
+    return "\n".join(dict.fromkeys(lines))
+
+
+def run_youtube(src, limit, dl):
+    videos = yt_list_videos(src, limit)
+    print(f"show: (YouTube) {src}")
+    print(f"episodes: {len(videos)} shown\n")
+
+    if not dl:
+        for i, v in enumerate(videos):
+            print(f"{i:2d} {v['date']} | {v['title'][:64]}")
+        print("\n! Pass --download DIR to fetch auto-caption transcripts via yt-dlp.")
+        return
+
+    os.makedirs(dl, exist_ok=True)
+    man = []
+    for i, v in enumerate(videos):
+        slug = re.sub(r"[^a-z0-9]+", "-", v["title"].lower()).strip("-")[:40]
+        p = os.path.join(dl, f"{i:02d}-{slug}.txt")
+        text = yt_transcript(v["id"], dl)
+        if text is None:
+            print(f"  {i:2d} FAIL no en captions -> {v['title'][:40]}")
+            continue
+        open(p, "w").write(text)
+        man.append({"title": v["title"], "date": v["date"], "path": os.path.abspath(p),
+                     "words": len(text.split()), "target": i == 0, "video_id": v["id"]})
+        print(f"  {len(text.split()):6d}w -> {p}")
+    json.dump(man, open(os.path.join(dl, "manifest.json"), "w"), indent=1)
+    print(f"\nmanifest: {os.path.join(dl, 'manifest.json')}  ({len(man)} files)")
 
 
 def resolve_source(src):
@@ -112,6 +218,10 @@ def main():
     src = a[0]
     limit = int(a[a.index("--limit") + 1]) if "--limit" in a else 12
     dl = a[a.index("--download") + 1] if "--download" in a else None
+
+    if is_youtube(src):
+        run_youtube(src, limit, dl)
+        return
 
     feed, show_id, ep_id, name = resolve_source(src)
     print(f"show: {name}\nfeed: {feed}")

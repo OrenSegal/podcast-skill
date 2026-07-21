@@ -4,12 +4,20 @@ Two skills, shipped together, for both Claude Code and Codex CLI — both tools
 read the identical `SKILL.md`-plus-scripts folder shape, just from different
 homes (`~/.claude/skills` vs `~/.codex/skills`).
 
-- **`podcast`** — resolve any podcast URL to its feed/transcripts, mine
-  episodes for ideas without dumping raw transcript into context, track
-  falsifiable predictions across episodes, dedup cross-show claims.
+- **`podcast`** — resolve any podcast URL (Apple Podcasts, Spotify, direct
+  RSS, or YouTube) to its feed/transcripts, mine episodes for ideas without
+  dumping raw transcript into context, track falsifiable predictions across
+  episodes, dedup cross-show claims.
 - **`signal-scout`** — the reporting stage `podcast` calls once it has
   findings: renders everything relevant, ranked into priority tiers, as one
   shareable Artifact. `podcast` depends on it.
+
+### Requirements
+
+- Python 3 (stdlib only for Apple/Spotify/RSS — no extra packages).
+- [`yt-dlp`](https://github.com/yt-dlp/yt-dlp) on `PATH` — only needed for
+  YouTube URLs (`brew install yt-dlp`, `pipx install yt-dlp`). Apple/Spotify/
+  RSS mining works without it.
 
 ## Install
 
